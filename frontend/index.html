@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Policy Management System</title>
+    <style>
+        /* Tailwind-like CSS */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f9fafb; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .navbar { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 16px 0; }
+        .nav-container { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        .btn { padding: 8px 16px; border-radius: 6px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: #2563eb; color: white; border: none; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .search-input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; width: 300px; }
+        .card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .form-container { max-width: 600px; margin: 0 auto; background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .form-input { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; margin-bottom: 16px; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 12px; font-weight: 500; }
+        .badge-blue { background: #dbeafe; color: #1e40af; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Navbar -->
+        <nav class="navbar">
+            <div class="nav-container">
+                <div>
+                    <h1 style="font-weight: bold; color: #2563eb; display: inline-block; margin-right: 20px;">Policy Manager</h1>
+                    <button class="btn btn-primary" onclick="showForm('applicant')">Add Applicant</button>
+                </div>
+                <div>
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search applicants..." onkeyup="searchApplicants()">
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="container">
+            <div id="applicantList">
+                <!-- Filled by JavaScript -->
+            </div>
+
+            <!-- Applicant Form (hidden by default) -->
+            <div id="applicantForm" style="display: none;">
+                <div class="form-container">
+                    <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem;" id="formTitle">Add Applicant</h2>
+                    <form id="applicantFormElement" onsubmit="handleApplicantSubmit(event)">
+                        <input type="hidden" id="applicantId">
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Name</label>
+                            <input type="text" id="applicantName" class="form-input" required>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Date of Birth</label>
+                            <input type="date" id="applicantDot" class="form-input">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Address</label>
+                            <textarea id="applicantAddress" class="form-input" rows="3"></textarea>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 1.5rem;">
+                            <button type="button" class="btn" style="border: 1px solid #d1d5db;" onclick="hideForms()">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Policy Form (hidden by default) -->
+            <div id="policyForm" style="display: none;">
+                <div class="form-container">
+                    <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem;">Add Policy</h2>
+                    <form id="policyFormElement" onsubmit="handlePolicySubmit(event)">
+                        <input type="hidden" id="policyId">
+                        <input type="hidden" id="policyApplicantId">
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Business Lines</label>
+                            <input type="text" id="policyBusinessLines" class="form-input" required>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Policy Number</label>
+                            <input type="text" id="policyNumber" class="form-input" required>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Effective Date</label>
+                                <input type="date" id="policyEffectiveDate" class="form-input" required>
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Expiration Date</label>
+                                <input type="date" id="policyExpirationDate" class="form-input" required>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 1.5rem;">
+                            <button type="button" class="btn" style="border: 1px solid #d1d5db;" onclick="hideForms()">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentView = 'list';
+        let applicants = [];
+        let currentApplicantId = null;
+
+        // DOM Elements
+        const applicantListEl = document.getElementById('applicantList');
+        const applicantFormEl = document.getElementById('applicantForm');
+        const policyFormEl = document.getElementById('policyForm');
+        const searchInputEl = document.getElementById('searchInput');
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchApplicants();
+        });
+
+        // Fetch all applicants
+        async function fetchApplicants() {
+            try {
+                const response = await fetch('/api/applicants');
+                applicants = await response.json();
+                renderApplicantList(applicants);
+            } catch (error) {
+                console.error('Error fetching applicants:', error);
+                alert('Failed to load applicants');
+            }
+        }
+
+        // Search applicants
+        async function searchApplicants() {
+            const searchTerm = searchInputEl.value.trim();
+            try {
+                const response = await fetch(`/api/applicants?search=${encodeURIComponent(searchTerm)}`);
+                applicants = await response.json();
+                renderApplicantList(applicants);
+            } catch (error) {
+                console.error('Error searching applicants:', error);
+            }
+        }
+
+        // Render applicant list
+        function renderApplicantList(applicants) {
+            if (applicants.length === 0) {
+                applicantListEl.innerHTML = '<p>No applicants found</p>';
+                return;
+            }
+
+            applicantListEl.innerHTML = `
+                <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem;">Applicants</h2>
+                <div class="grid">
+                    ${applicants.map(applicant => `
+                        <div class="card">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <h3 style="font-weight: 600; font-size: 1.125rem; margin-bottom: 0.5rem;">${applicant.name}</h3>
+                                <span class="badge badge-blue">${applicant.policies ? applicant.policies.length : 0} policies</span>
+                            </div>
+                            <p style="color: #4b5563; margin-bottom: 0.5rem;">${applicant.address || 'No address'}</p>
+                            <p style="color: #6b7280; font-size: 0.875rem;">DOB: ${applicant.dot || 'Not specified'}</p>
+                            <div style="display: flex; gap: 8px; margin-top: 1rem;">
+                                <button onclick="editApplicant(${applicant.id})" style="padding: 6px 12px; background: #e0e7ff; color: #4338ca; border: none; border-radius: 4px; cursor: pointer;">Edit</button>
+                                <button onclick="addPolicy(${applicant.id})" style="padding: 6px 12px; background: #dcfce7; color: #166534; border: none; border-radius: 4px; cursor: pointer;">Add Policy</button>
+                                <button onclick="deleteApplicant(${applicant.id})" style="padding: 6px 12px; background: #fee2e2; color: #991b1b; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // Show forms
+        function showForm(type, id = null) {
+            if (type === 'applicant') {
+                document.getElementById('formTitle').textContent = id ? 'Edit Applicant' : 'Add Applicant';
+                if (id) {
+                    const applicant = applicants.find(a => a.id === id);
+                    if (applicant) {
+                        document.getElementById('applicantId').value = applicant.id;
+                        document.getElementById('applicantName').value = applicant.name;
+                        document.getElementById('applicantDot').value = applicant.dot;
+                        document.getElementById('applicantAddress').value = applicant.address || '';
+                    }
+                } else {
+                    document.getElementById('applicantFormElement').reset();
+                }
+                applicantFormEl.style.display = 'block';
+                policyFormEl.style.display = 'none';
+                applicantListEl.style.display = 'none';
+            } else if (type === 'policy') {
+                if (id) {
+                    // For editing policy (implementation needed)
+                } else {
+                    document.getElementById('policyFormElement').reset();
+                    document.getElementById('policyApplicantId').value = currentApplicantId;
+                }
+                policyFormEl.style.display = 'block';
+                applicantFormEl.style.display = 'none';
+                applicantListEl.style.display = 'none';
+            }
+            currentView = 'form';
+        }
+
+        // Hide all forms
+        function hideForms() {
+            applicantFormEl.style.display = 'none';
+            policyFormEl.style.display = 'none';
+            applicantListEl.style.display = 'block';
+            currentView = 'list';
+        }
+
+        // Handle applicant form submission
+        async function handleApplicantSubmit(event) {
+            event.preventDefault();
+            
+            const applicantData = {
+                name: document.getElementById('applicantName').value,
+                dot: document.getElementById('applicantDot').value,
+                address: document.getElementById('applicantAddress').value
+            };
+
+            const applicantId = document.getElementById('applicantId').value;
+            const method = applicantId ? 'PUT' : 'POST';
+            const url = applicantId ? `/api/applicants/${applicantId}` : '/api/applicants';
+
+            try {
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(applicantData)
+                });
+
+                if (response.ok) {
+                    hideForms();
+                    fetchApplicants();
+                } else {
+                    alert('Failed to save applicant');
+                }
+            } catch (error) {
+                console.error('Error saving applicant:', error);
+                alert('Error saving applicant');
+            }
+        }
+
+        // Handle policy form submission
+        async function handlePolicySubmit(event) {
+            event.preventDefault();
+            
+            const policyData = {
+                business_lines: document.getElementById('policyBusinessLines').value,
+                policy_no: document.getElementById('policyNumber').value,
+                effective_date: document.getElementById('policyEffectiveDate').value,
+                expiration_date: document.getElementById('policyExpirationDate').value,
+                applicant_id: document.getElementById('policyApplicantId').value
+            };
+
+            const policyId = document.getElementById('policyId').value;
+            const method = policyId ? 'PUT' : 'POST';
+            const url = policyId 
+                ? `/api/policies/${policyId}`
+                : `/api/applicants/${policyData.applicant_id}/policies`;
+
+            try {
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(policyData)
+                });
+
+                if (response.ok) {
+                    hideForms();
+                    fetchApplicants();
+                } else {
+                    alert('Failed to save policy');
+                }
+            } catch (error) {
+                console.error('Error saving policy:', error);
+                alert('Error saving policy');
+            }
+        }
+
+        // Edit applicant
+        function editApplicant(id) {
+            showForm('applicant', id);
+        }
+
+        // Add policy
+        function addPolicy(applicantId) {
+            currentApplicantId = applicantId;
+            showForm('policy');
+        }
+
+        // Delete applicant
+        async function deleteApplicant(id) {
+            if (!confirm('Are you sure you want to delete this applicant and all their policies?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/applicants/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    fetchApplicants();
+                } else {
+                    alert('Failed to delete applicant');
+                }
+            } catch (error) {
+                console.error('Error deleting applicant:', error);
+                alert('Error deleting applicant');
+            }
+        }
+    </script>
+</body>
+</html>
