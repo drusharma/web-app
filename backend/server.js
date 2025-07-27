@@ -31,7 +31,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// Improved applicants endpointapp.get('/api/applicants', async (req, res) => {
+// Improved applicants endpoint
+app.get('/api/applicants', async (req, res) => {
   const client = await pool.connect();
   try {
     console.log('Attempting to fetch applicants from database'); // Debug log
@@ -80,7 +81,7 @@ app.use(express.static(path.join(__dirname, '../frontend')));
   } finally {
     client.release();
   }
-});;
+});
 
 // [Keep all your other existing endpoints exactly as they are]
 
