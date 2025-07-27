@@ -31,43 +31,56 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// Improved applicants endpoint
-app.get('/api/applicants', async (req, res) => {
+// Improved applicants endpointapp.get('/api/applicants', async (req, res) => {
   const client = await pool.connect();
   try {
+    console.log('Attempting to fetch applicants from database'); // Debug log
+    
+    // Simple query without the JSON aggregation first
+    const testQuery = await client.query('SELECT id, name FROM applicant LIMIT 1');
+    console.log('Test query successful:', testQuery.rows);
+
+    // Main query
     const { search } = req.query;
-    let query = `
-      SELECT 
-        a.*,
-        (SELECT json_agg(p) FROM policy p WHERE p.applicant_id = a.id) AS policies
-      FROM applicant a
-    `;
+    let query = 'SELECT * FROM applicant';
+    const params = [];
     
     if (search) {
-      query += ` WHERE a.name ILIKE $1 OR a.address ILIKE $1`;
+      query += ' WHERE name ILIKE $1 OR address ILIKE $1';
+      params.push(`%${search}%`);
     }
     
-    query += ' ORDER BY a.name';
+    query += ' ORDER BY name';
     
-    const result = await client.query(
-      query,
-      search ? [`%${search}%`] : []
+    const result = await client.query(query, params);
+    console.log(`Found ${result.rows.length} applicants`); // Debug log
+    
+    // Get policies separately (more reliable than json_agg)
+    const applicantsWithPolicies = await Promise.all(
+      result.rows.map(async applicant => {
+        const policies = await client.query(
+          'SELECT * FROM policy WHERE applicant_id = $1',
+          [applicant.id]
+        );
+        return { ...applicant, policies: policies.rows };
+      })
     );
-    
-    res.json(result.rows.map(row => ({
-      ...row,
-      policies: row.policies || [] // Ensure policies is always an array
-    })));
+
+    res.json(applicantsWithPolicies);
   } catch (err) {
-    console.error('DB Query Error:', err);
+    console.error('DATABASE ERROR:', err);
     res.status(500).json({ 
       error: 'Failed to load applicants',
-      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      details: process.env.NODE_ENV === 'development' ? {
+        message: err.message,
+        stack: err.stack,
+        query: err.query
+      } : null
     });
   } finally {
     client.release();
   }
-});
+});;
 
 // [Keep all your other existing endpoints exactly as they are]
 
